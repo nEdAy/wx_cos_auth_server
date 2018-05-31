@@ -1,6 +1,5 @@
 // 临时密钥计算样例
 
-var http = require('http');
 var crypto = require('crypto');
 var request = require('request');
 
@@ -15,8 +14,6 @@ var config = {
     Region: 'ap-beijing',
     AllowPrefix: '*' // 这里改成允许的路径前缀，这里可以根据自己网站的用户登录态判断允许上传的目录，例子：* 或者 a/* 或者 a.jpg
 };
-
-var port = 3003;
 
 // 缓存临时密钥
 var tempKeysCache = {
@@ -58,7 +55,7 @@ var getTempKeys = function (callback) {
     }
 
     // 定义绑定临时密钥的权限策略
-    var ShortBucketName = config.Bucket.substr(0 , config.Bucket.lastIndexOf('-'));
+    var ShortBucketName = config.Bucket.substr(0, config.Bucket.lastIndexOf('-'));
     var AppId = config.Bucket.substr(1 + config.Bucket.lastIndexOf('-'));
     var policy = {
         'version': '2.0',
@@ -175,7 +172,7 @@ function camSafeUrlEncode(str) {
         .replace(/\*/g, '%2A');
 }
 
-function getAuthorization (keys, method, pathname) {
+function getAuthorization(keys, method, pathname) {
 
     var SecretId = keys.credentials.tmpSecretId;
     var SecretKey = keys.credentials.tmpSecretKey;
@@ -208,7 +205,7 @@ function getAuthorization (keys, method, pathname) {
             key = key.toLowerCase();
             key = camSafeUrlEncode(key);
             val = camSafeUrlEncode(val) || '';
-            list.push(key + '=' +  val)
+            list.push(key + '=' + val)
         }
         return list.join('&');
     };
@@ -239,7 +236,7 @@ function getAuthorization (keys, method, pathname) {
     var qSignature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex');
 
     // 步骤五：构造 Authorization
-    var authorization  = [
+    var authorization = [
         'q-sign-algorithm=' + qSignAlgorithm,
         'q-ak=' + qAk,
         'q-sign-time=' + qSignTime,
@@ -265,38 +262,22 @@ function getParam(url, name) {
     return params[name];
 }
 
-// 启动简单的签名服务
-http.createServer(function(req, res){
-    if (req.url.indexOf('/sts-auth') === 0) {
-        // 获取前端过来的参数
-        var method = getParam(req.url, 'method');
-        var pathname = decodeURIComponent(getParam(req.url, 'pathname'));
 
-        // 获取临时密钥，计算签名
-        getTempKeys(function (err, tempKeys) {
-            var data;
-            if (err) {
-                data = err;
-            } else {
-                data = {
-                    Authorization: getAuthorization(tempKeys, method, pathname),
-                    XCosSecurityToken: tempKeys['credentials'] && tempKeys['credentials']['sessionToken'],
-                };
-            }
+function getAuthData(method, pathname) {
+    var data = "";
+    // 获取临时密钥，计算签名
+    getTempKeys(function (err, tempKeys) {
+        if (err) {
+            data = err;
+        } else {
+            data = {
+                Authorization: getAuthorization(tempKeys, method, pathname),
+                XCosSecurityToken: tempKeys['credentials'] && tempKeys['credentials']['sessionToken'],
+            };
+        }
+    });
+    // 返回数据给前端
+    return JSON.stringify(data) || ''
+}
 
-            // 返回数据给前端
-            res.writeHead(200, {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': 'http://127.0.0.1',
-                'Access-Control-Allow-Headers': 'origin,accept,content-type',
-            });
-            res.write(JSON.stringify(data) || '');
-            res.end();
-        });
-    } else {
-        res.writeHead(404);
-        res.write('404 Not Found');
-        res.end();
-    }
-}).listen(port);
-console.log('app is listening at http://127.0.0.1:' + port);
+module.exports = getAuthData;

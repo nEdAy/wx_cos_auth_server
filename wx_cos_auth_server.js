@@ -18,13 +18,14 @@
 var PROTO_PATH = __dirname + '/wx_cos_auth.proto';
 
 var grpc = require('grpc');
+var sts_auth = require('./sts-auth');
 var wx_cos_auth_proto = grpc.load(PROTO_PATH).wx_cos_auth;
 
 /**
  * Implements the SayHello RPC method.
  */
 function getAuthData(call, callback) {
-  callback(null, {auth_data: 'Hello'});
+    callback(null, {auth_data: sts_auth(call.request.method, call.request.pathname)});
 }
 
 /**
@@ -32,10 +33,10 @@ function getAuthData(call, callback) {
  * sample server port
  */
 function main() {
-  var server = new grpc.Server();
-  server.addService(wx_cos_auth_proto.WXCosAuth.service, {getAuthData: getAuthData});
-  server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
-  server.start();
+    var server = new grpc.Server();
+    server.addService(wx_cos_auth_proto.WXCosAuth.service, {getAuthData: getAuthData});
+    server.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
+    server.start();
 }
 
 main();

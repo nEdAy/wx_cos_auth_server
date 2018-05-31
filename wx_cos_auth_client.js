@@ -22,11 +22,11 @@ var grpc = require('grpc');
 var wx_cos_auth_proto = grpc.load(PROTO_PATH).wx_cos_auth;
 
 function main() {
-  var client = new wx_cos_auth_proto.WXCosAuth('localhost:50051',
-                                       grpc.credentials.createInsecure());
-  client.getAuthData({}, function(err, response) {
-    console.log('Greeting:', response.auth_data);
-  });
+    var client = new wx_cos_auth_proto.WXCosAuth('localhost:50051',
+        grpc.credentials.createInsecure());
+    client.getAuthData({method: "POST", pathname: "/"}, function (err, response) {
+        console.log('wx_cos_auth:', response.auth_data);
+    });
 }
 
 main();
